@@ -8,7 +8,8 @@ export class YoutubeCryptoStack extends Stack {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, 'MainVpc', {
-      maxAzs: 2,
+      maxAzs: 1,
+      natGateways: 0,
     });
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
@@ -17,6 +18,9 @@ export class YoutubeCryptoStack extends Stack {
 
     cluster.addCapacity('DefaultAutoScalingGroup', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      }
     });
 
     const taskDef = new ecs.Ec2TaskDefinition(this, 'TaskDefinition');
