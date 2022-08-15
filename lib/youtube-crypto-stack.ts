@@ -2,10 +2,6 @@ import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns'
-
-
-const EPHEMERAL_PORT_RANGE = ec2.Port.tcpRange(32768, 65535);
 
 export class YoutubeCryptoStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -23,20 +19,16 @@ export class YoutubeCryptoStack extends Stack {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
     });
 
-    const loadBalancedEc2Service = new ecs_patterns.NetworkLoadBalancedEc2Service(this, 'NLBEc2Service', {
-      cluster: cluster,
+    const taskDef = new ecs.Ec2TaskDefinition(this, 'TaskDefinition');
+
+    const container = taskDef.addContainer('web', {
+      image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
       memoryLimitMiB: 512,
-      taskImageOptions: {
-        image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
-      },
     });
 
-    loadBalancedEc2Service.service.connections.allowFromAnyIpv4(EPHEMERAL_PORT_RANGE);
-    loadBalancedEc2Service.service.connections.allowFromAnyIpv4(ec2.Port.tcp(80));
-
-    new CfnOutput(this, 'networkLoadBalancerURL', {
-      value: 'https://'+loadBalancedEc2Service.loadBalancer.loadBalancerDnsName,
-      description: 'Network LoadBalancer URL',
+    const service = new ecs.Ec2Service(this, 'Service', {
+      cluster: cluster,
+      taskDefinition: taskDef,
     });
   }
 }
